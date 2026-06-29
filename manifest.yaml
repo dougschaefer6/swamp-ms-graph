@@ -1,0 +1,31 @@
+manifestVersion: 1
+name: "@dougschaefer/ms-graph"
+version: "2026.06.29.1"
+description: "Broad Microsoft Graph v1.0 extension — seven model types over app-only client credentials: calendar (room/user calendarView, current/next meeting), places (room resources), users (Entra directory reads, manager, memberOf), groups, mail (Outlook messages), teams (chats/teams/channels/messages), and presence. Shared token-caching + paging client; credentials from the azure-asei vault. Supersedes the narrow ms-graph-calendar and absorbs azure-ad-user's lookup."
+repository: https://github.com/dougschaefer6/swamp-ms-graph
+additionalFiles:
+  - README.md
+  - LICENSE.txt
+labels:
+  - microsoft-graph
+  - m365
+  - entra
+  - identity
+  - calendar
+  - places
+  - rooms
+  - exchange
+  - teams
+  - presence
+  - mail
+  - groups
+  - iars
+  - rest
+models:
+  - ms-graph/calendar.ts
+  - ms-graph/places.ts
+  - ms-graph/users.ts
+  - ms-graph/groups.ts
+  - ms-graph/mail.ts
+  - ms-graph/teams.ts
+  - ms-graph/presence.ts
