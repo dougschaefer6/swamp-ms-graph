@@ -53,7 +53,7 @@ const MessageSchema = z
  */
 export const model = {
   type: "@dougschaefer/ms-graph-mail",
-  version: "2026.07.13.2",
+  version: "2026.07.13.3",
   globalArguments: MsGraphGlobalArgsSchema,
   resources: {
     messageList: {

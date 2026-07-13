@@ -1,6 +1,6 @@
 manifestVersion: 1
 name: "@dougschaefer/ms-graph"
-version: "2026.07.13.2"
+version: "2026.07.13.3"
 description: "Broad Microsoft Graph v1.0 extension — eight model types: calendar (room/user calendarView, current/next meeting), places (room resources), users (Entra directory reads, manager, memberOf), groups, mail (Outlook messages), teams (chats/teams/channels/messages), presence over app-only client credentials, and sharepoint (document-library navigation, customer-folder resolution, drive search, and scored evidence collection) over the delegated az-session token. Shared token-caching + paging client; app credentials supplied from a vault. Supersedes the narrow ms-graph-calendar and absorbs azure-ad-user's lookup."
 repository: https://github.com/dougschaefer6/swamp-ms-graph
 additionalFiles:

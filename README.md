@@ -14,7 +14,7 @@ model types, one shared client. It supersedes the narrow
 | `@dougschaefer/ms-graph-mail` | `listMessages`, `getMessage` | `Mail.Read` |
 | `@dougschaefer/ms-graph-teams` | `listChats`, `listJoinedTeams`, `listChannels`, `listMessages` | `Chat.Read.All`, `ChannelMessage.Read.All` (+ `Team.ReadBasic.All`, `Channel.ReadBasic.All`) |
 | `@dougschaefer/ms-graph-presence` | `getPresence` | `Presence.Read.All` |
-| `@dougschaefer/ms-graph-sharepoint` | `getSite`, `listFolder`, `findCustomerFolder`, `searchDriveItems`, `downloadDriveItem`, `collectCustomerDocs` | delegated az-session token (operator's own SharePoint permissions) |
+| `@dougschaefer/ms-graph-sharepoint` | `getSite`, `listFolder`, `searchDriveItems`, `downloadDriveItem` | delegated az-session token (operator's own SharePoint permissions) |
 
 The first seven types share `_client.ts`'s app-only client: client-credentials
 token acquisition with an in-memory token cache, a low-level `graphRequest`, and
@@ -25,17 +25,13 @@ The `sharepoint` model deliberately breaks from the app-only pattern: it reads a
 document library with the DELEGATED token of the active `az login` session, so
 file access rides the signed-in operator's own identity and SharePoint
 permissions, requires no vault configuration and no app permission grants, and
-shows the human (not an app) in SharePoint audit logs. It understands a
-clients-library layout of region folders → single-letter buckets → customer
-folders → `<project#> <title>` project folders (buckets are auto-detected, so
-libraries that list customers directly work too): `findCustomerFolder` resolves
-a customer name across all regions, and `collectCustomerDocs` walks the
-customer's tree, scores files against configurable keywords and project
-numbers, and downloads the winners as file artifacts with a manifest — built
-for evidence-collection workflows that need the best supporting documents for
-a customer engagement. If it ever needs to run headless, grant an app
-registration `Sites.Selected` on the specific site instead of widening to
-`Sites.Read.All`.
+shows the human (not an app) in SharePoint audit logs. `getSite` resolves the
+configured site, `listFolder` snapshots a folder's children, `searchDriveItems`
+runs a Graph drive search (site-wide or scoped to a folder path), and
+`downloadDriveItem` persists a file's bytes as a file artifact — the building
+blocks for document-retrieval workflows over any library layout. If it ever
+needs to run headless, grant an app registration `Sites.Selected` on the
+specific site instead of widening to `Sites.Read.All`.
 
 ## Authentication
 
