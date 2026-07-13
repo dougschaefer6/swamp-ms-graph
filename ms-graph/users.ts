@@ -66,7 +66,7 @@ const DirectoryObjectSchema = z
  */
 export const model = {
   type: "@dougschaefer/ms-graph-users",
-  version: "2026.07.13.3",
+  version: "2026.07.13.4",
   globalArguments: MsGraphGlobalArgsSchema,
   resources: {
     user: {

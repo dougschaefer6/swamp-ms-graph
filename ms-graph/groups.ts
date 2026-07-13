@@ -58,7 +58,7 @@ const MemberSchema = z
  */
 export const model = {
   type: "@dougschaefer/ms-graph-groups",
-  version: "2026.07.13.3",
+  version: "2026.07.13.4",
   globalArguments: MsGraphGlobalArgsSchema,
   resources: {
     group: {
