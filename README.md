@@ -1,6 +1,6 @@
 # @dougschaefer/ms-graph
 
-A broad Microsoft Graph v1.0 extension for the ASEI catalog. One extension, eight
+A broad Microsoft Graph v1.0 extension. One extension, eight
 model types, one shared client. It supersedes the narrow
 `@dougschaefer/ms-graph-calendar` and absorbs the lookup half of
 `@dougschaefer/azure-ad-user` into a Graph-native `users` model.
@@ -26,27 +26,29 @@ document library with the DELEGATED token of the active `az login` session, so
 file access rides the signed-in operator's own identity and SharePoint
 permissions, requires no vault configuration and no app permission grants, and
 shows the human (not an app) in SharePoint audit logs. It understands a
-clients-library layout of office folders → single-letter buckets → customer
-folders → `<project#> <title>` project folders: `findCustomerFolder` resolves a
-customer name across all offices, and `collectCustomerDocs` walks the customer's
-tree, scores files against keywords and ERP project numbers (signed documents
-and customer POs score highest), and downloads the winners as file artifacts
-with a manifest — the engine behind the CPOR evidence-remediation workflow. If
-it ever needs to run headless, grant an app registration `Sites.Selected` on
-the specific site instead of widening to `Sites.Read.All`.
+clients-library layout of region folders → single-letter buckets → customer
+folders → `<project#> <title>` project folders (buckets are auto-detected, so
+libraries that list customers directly work too): `findCustomerFolder` resolves
+a customer name across all regions, and `collectCustomerDocs` walks the
+customer's tree, scores files against configurable keywords and project
+numbers, and downloads the winners as file artifacts with a manifest — built
+for evidence-collection workflows that need the best supporting documents for
+a customer engagement. If it ever needs to run headless, grant an app
+registration `Sites.Selected` on the specific site instead of widening to
+`Sites.Read.All`.
 
 ## Authentication
 
 App-only client-credentials flow against Microsoft Graph v1.0. Credentials come
-from the existing `azure-asei` vault and are passed in as the model's
+from the existing `azure-graph` vault and are passed in as the model's
 globalArguments — extensions have no vault API in model context, so the model
 instance definition (or the workflow) supplies them via CEL:
 
 ```
-swamp vault create azure-asei local_encryption   # skip if it already exists
-swamp vault add-secret azure-asei client_id     <app-registration-client-id>
-swamp vault add-secret azure-asei client_secret <app-registration-client-secret>
-swamp vault add-secret azure-asei tenant_id     <entra-tenant-id>
+swamp vault create azure-graph local_encryption   # skip if it already exists
+swamp vault add-secret azure-graph client_id     <app-registration-client-id>
+swamp vault add-secret azure-graph client_secret <app-registration-client-secret>
+swamp vault add-secret azure-graph tenant_id     <entra-tenant-id>
 ```
 
 ## Instance creation
@@ -56,36 +58,29 @@ Each type is a separate instance; all three credential settings are identical:
 ```
 swamp model create ms-graph-calendar \
   --type @dougschaefer/ms-graph-calendar \
-  --set client_id='${{ vault.get(azure-asei, client_id) }}' \
-  --set client_secret='${{ vault.get(azure-asei, client_secret) }}' \
-  --set tenant_id='${{ vault.get(azure-asei, tenant_id) }}'
+  --set client_id='${{ vault.get(azure-graph, client_id) }}' \
+  --set client_secret='${{ vault.get(azure-graph, client_secret) }}' \
+  --set tenant_id='${{ vault.get(azure-graph, tenant_id) }}'
 
 swamp model create ms-graph-users \
   --type @dougschaefer/ms-graph-users \
-  --set client_id='${{ vault.get(azure-asei, client_id) }}' \
-  --set client_secret='${{ vault.get(azure-asei, client_secret) }}' \
-  --set tenant_id='${{ vault.get(azure-asei, tenant_id) }}'
+  --set client_id='${{ vault.get(azure-graph, client_id) }}' \
+  --set client_secret='${{ vault.get(azure-graph, client_secret) }}' \
+  --set tenant_id='${{ vault.get(azure-graph, tenant_id) }}'
 # ...repeat for ms-graph-places, ms-graph-groups, ms-graph-mail, ms-graph-teams, ms-graph-presence
 ```
 
 ## Scopes to grant
 
-The ASEI "Swamp" Entra app registration currently has **only these three
-application permissions** consented, so only the corresponding models are
-**live-functional today**:
-
-| Consented now | Enables |
-|---------------|---------|
-| `User.Read.All` | `ms-graph-users` (all methods) |
-| `Calendars.Read` | `ms-graph-calendar` (all methods) |
-| `Place.Read.All` | `ms-graph-places` (all methods) |
-
-The remaining four models are **built but scope-gated** — they will return HTTP
-403 until an admin adds and grants admin consent for these **application**
-permissions on the Swamp app registration:
+Each model requires its Graph **application** permission (from the table at the
+top) admin-consented on your app registration. Models whose permission is not
+granted return HTTP 403 — grant only what you use:
 
 | Grant to enable | Model(s) |
 |-----------------|----------|
+| `User.Read.All` | `ms-graph-users` |
+| `Calendars.Read` | `ms-graph-calendar` |
+| `Place.Read.All` | `ms-graph-places` |
 | `Group.Read.All` | `ms-graph-groups` |
 | `Mail.Read` | `ms-graph-mail` |
 | `Chat.Read.All` | `ms-graph-teams` (chats + chat messages) |
@@ -94,10 +89,11 @@ permissions on the Swamp app registration:
 | `Channel.ReadBasic.All` | `ms-graph-teams` (`listChannels`) |
 | `Presence.Read.All` | `ms-graph-presence` |
 
-Grant in **Entra admin center → App registrations → Swamp → API permissions →
+Grant in **Entra admin center → App registrations → your app → API permissions →
 Add a permission → Microsoft Graph → Application permissions**, then **Grant admin
 consent**. Application `Mail.Read` is tenant-wide; scope it with an Exchange Online
-`ApplicationAccessPolicy` before production use.
+`ApplicationAccessPolicy` before production use. The `sharepoint` model needs no
+app permission at all — it uses the operator's delegated az-session token.
 
 ## Migration: ms-graph-calendar and azure-ad-user
 

@@ -60,13 +60,13 @@ const DirectoryObjectSchema = z
  * (admin-consented and live-verified in the tenant). `getManager` and
  * `memberOf` also resolve under `User.Read.All`.
  *
- *   client_id:     ${{ vault.get(azure-asei, client_id) }}
- *   client_secret: ${{ vault.get(azure-asei, client_secret) }}
- *   tenant_id:     ${{ vault.get(azure-asei, tenant_id) }}
+ *   client_id:     ${{ vault.get(azure-graph, client_id) }}
+ *   client_secret: ${{ vault.get(azure-graph, client_secret) }}
+ *   tenant_id:     ${{ vault.get(azure-graph, tenant_id) }}
  */
 export const model = {
   type: "@dougschaefer/ms-graph-users",
-  version: "2026.07.13.1",
+  version: "2026.07.13.2",
   globalArguments: MsGraphGlobalArgsSchema,
   resources: {
     user: {

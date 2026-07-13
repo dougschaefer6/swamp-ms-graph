@@ -24,15 +24,15 @@ import {
  *
  * Authentication uses the shared app-only client-credentials client from
  * `_client.ts` against the configured Entra app vault. The required application
- * permission is `Calendars.Read` (admin-consented and live-verified in the tenant):
+ * permission is `Calendars.Read` (admin consent required):
  *
- *   client_id:     ${{ vault.get(azure-asei, client_id) }}
- *   client_secret: ${{ vault.get(azure-asei, client_secret) }}
- *   tenant_id:     ${{ vault.get(azure-asei, tenant_id) }}
+ *   client_id:     ${{ vault.get(azure-graph, client_id) }}
+ *   client_secret: ${{ vault.get(azure-graph, client_secret) }}
+ *   tenant_id:     ${{ vault.get(azure-graph, tenant_id) }}
  */
 export const model = {
   type: "@dougschaefer/ms-graph-calendar",
-  version: "2026.07.13.1",
+  version: "2026.07.13.2",
   globalArguments: MsGraphGlobalArgsSchema,
   resources: {
     calendarView: {

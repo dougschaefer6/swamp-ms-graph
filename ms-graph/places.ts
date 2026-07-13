@@ -22,15 +22,15 @@ import {
  *
  * Authentication uses the shared app-only client from `_client.ts` against the
  * configured Entra app vault. Required application permission: `Place.Read.All`
- * (admin-consented and live-verified in the tenant).
+ * (admin consent required).
  *
- *   client_id:     ${{ vault.get(azure-asei, client_id) }}
- *   client_secret: ${{ vault.get(azure-asei, client_secret) }}
- *   tenant_id:     ${{ vault.get(azure-asei, tenant_id) }}
+ *   client_id:     ${{ vault.get(azure-graph, client_id) }}
+ *   client_secret: ${{ vault.get(azure-graph, client_secret) }}
+ *   tenant_id:     ${{ vault.get(azure-graph, tenant_id) }}
  */
 export const model = {
   type: "@dougschaefer/ms-graph-places",
-  version: "2026.07.13.1",
+  version: "2026.07.13.2",
   globalArguments: MsGraphGlobalArgsSchema,
   resources: {
     roomList: {

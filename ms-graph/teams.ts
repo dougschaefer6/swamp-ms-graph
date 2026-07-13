@@ -48,17 +48,16 @@ const ChannelSchema = z
  * configured Entra app vault. Required application permissions: `Chat.Read.All`
  * (chats and chat messages) and `ChannelMessage.Read.All` (channel messages); team
  * and channel enumeration also needs `Team.ReadBasic.All` / `Channel.ReadBasic.All`.
- * As of this writing the Swamp Entra app has NOT been consented any of these,
- * so these methods are built but will return HTTP 403 until an admin grants and
- * consents the scopes. See the README "Scopes to grant" section.
+ * These methods return HTTP 403 until an admin grants and consents those scopes
+ * on your app registration. See the README "Scopes to grant" section.
  *
- *   client_id:     ${{ vault.get(azure-asei, client_id) }}
- *   client_secret: ${{ vault.get(azure-asei, client_secret) }}
- *   tenant_id:     ${{ vault.get(azure-asei, tenant_id) }}
+ *   client_id:     ${{ vault.get(azure-graph, client_id) }}
+ *   client_secret: ${{ vault.get(azure-graph, client_secret) }}
+ *   tenant_id:     ${{ vault.get(azure-graph, tenant_id) }}
  */
 export const model = {
   type: "@dougschaefer/ms-graph-teams",
-  version: "2026.07.13.1",
+  version: "2026.07.13.2",
   globalArguments: MsGraphGlobalArgsSchema,
   resources: {
     chat: {

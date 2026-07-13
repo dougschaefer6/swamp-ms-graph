@@ -49,17 +49,16 @@ const MemberSchema = z
  *
  * Authentication uses the shared app-only client from `_client.ts` against the
  * configured Entra app vault. Required application permission: `Group.Read.All`.
- * As of this writing the Swamp Entra app has NOT been consented `Group.Read.All`,
- * so these methods are built but will return HTTP 403 until an admin grants and
- * consents the scope. See the README "Scopes to grant" section.
+ * These methods return HTTP 403 until an admin grants and consents that scope
+ * on your app registration. See the README "Scopes to grant" section.
  *
- *   client_id:     ${{ vault.get(azure-asei, client_id) }}
- *   client_secret: ${{ vault.get(azure-asei, client_secret) }}
- *   tenant_id:     ${{ vault.get(azure-asei, tenant_id) }}
+ *   client_id:     ${{ vault.get(azure-graph, client_id) }}
+ *   client_secret: ${{ vault.get(azure-graph, client_secret) }}
+ *   tenant_id:     ${{ vault.get(azure-graph, tenant_id) }}
  */
 export const model = {
   type: "@dougschaefer/ms-graph-groups",
-  version: "2026.07.13.1",
+  version: "2026.07.13.2",
   globalArguments: MsGraphGlobalArgsSchema,
   resources: {
     group: {

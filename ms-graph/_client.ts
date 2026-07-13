@@ -15,9 +15,9 @@ import { z } from "npm:zod@4.3.6";
  * Credentials are resolved from a local vault and passed in as the model's
  * globalArguments (extensions have NO vault API in model context — the workflow or
  * the model instance definition supplies them via CEL):
- *   client_id:     ${{ vault.get(azure-asei, client_id) }}
- *   client_secret: ${{ vault.get(azure-asei, client_secret) }}
- *   tenant_id:     ${{ vault.get(azure-asei, tenant_id) }}
+ *   client_id:     ${{ vault.get(azure-graph, client_id) }}
+ *   client_secret: ${{ vault.get(azure-graph, client_secret) }}
+ *   tenant_id:     ${{ vault.get(azure-graph, tenant_id) }}
  *
  * Plain `fetch` is used throughout — no native-addon npm libs (those break
  * `deno bundle`). Model entry files export ONLY `model`; every helper lives here
@@ -33,13 +33,13 @@ export const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
  */
 export const MsGraphGlobalArgsSchema = z.object({
   clientId: z.string().describe(
-    "Entra app registration client ID. Use: ${{ vault.get(azure-asei, client_id) }}",
+    "Entra app registration client ID. Use: ${{ vault.get(azure-graph, client_id) }}",
   ),
   clientSecret: z.string().meta({ sensitive: true }).describe(
-    "Entra app registration client secret. Use: ${{ vault.get(azure-asei, client_secret) }}",
+    "Entra app registration client secret. Use: ${{ vault.get(azure-graph, client_secret) }}",
   ),
   tenantId: z.string().describe(
-    "Entra tenant ID. Use: ${{ vault.get(azure-asei, tenant_id) }}",
+    "Entra tenant ID. Use: ${{ vault.get(azure-graph, tenant_id) }}",
   ),
   timezone: z.string().default("Eastern Standard Time").describe(
     "IANA or Windows timezone name sent as the Prefer: outlook.timezone header on calendarView calls",

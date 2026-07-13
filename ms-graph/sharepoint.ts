@@ -198,7 +198,7 @@ async function findCustomerFolders(
  */
 export const model = {
   type: "@dougschaefer/ms-graph-sharepoint",
-  version: "2026.07.13.1",
+  version: "2026.07.13.2",
   globalArguments: SharePointGlobalArgsSchema,
   resources: {
     site: {
