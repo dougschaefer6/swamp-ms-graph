@@ -294,3 +294,109 @@ export function slugify(value: string, fallback = "item"): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 48) || fallback;
 }
+
+/** In-memory cache for the delegated az-session Graph token. */
+let _azTokenCache: { token: string; expiresAt: number } | null = null;
+
+/**
+ * Acquire a DELEGATED Microsoft Graph token from the active `az login`
+ * session (the signed-in human, not an app registration). Used by the
+ * sharepoint model, where document access should ride the operator's own
+ * identity and SharePoint permissions rather than an app-only grant. The
+ * token arrives in az's JSON output (never on a command line) and is cached
+ * until shortly before expiry.
+ */
+export async function azGraphToken(): Promise<string> {
+  const now = Date.now();
+  if (_azTokenCache && _azTokenCache.expiresAt > now) {
+    return _azTokenCache.token;
+  }
+  const cmd = new Deno.Command("az", {
+    args: [
+      "account",
+      "get-access-token",
+      "--resource",
+      "https://graph.microsoft.com",
+      "--output",
+      "json",
+    ],
+    stdout: "piped",
+    stderr: "piped",
+  });
+  const result = await cmd.output();
+  if (result.code !== 0) {
+    const stderr = new TextDecoder().decode(result.stderr);
+    throw new Error(`az graph token acquisition failed: ${stderr}`);
+  }
+  const data = JSON.parse(new TextDecoder().decode(result.stdout)) as Record<
+    string,
+    unknown
+  >;
+  const token = str(data.accessToken);
+  // expiresOn is a local-time string; refresh conservatively every 20 min.
+  _azTokenCache = { token, expiresAt: now + 20 * 60 * 1000 };
+  return token;
+}
+
+/** GET a Graph URL with the delegated az-session token; throws on non-2xx. */
+export async function azGraphJson(
+  url: string,
+): Promise<Record<string, unknown>> {
+  const token = await azGraphToken();
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  });
+  const text = await res.text();
+  let data: Record<string, unknown> = {};
+  try {
+    data = JSON.parse(text);
+  } catch {
+    // fall through
+  }
+  if (!res.ok) {
+    const detail = graphErrorMessage(data) ?? text.slice(0, 300);
+    throw new Error(`Graph GET ${url} failed HTTP ${res.status}: ${detail}`);
+  }
+  return data;
+}
+
+/** Follow @odata.nextLink pages for a delegated az-session GET. */
+export async function azGraphAllPages(
+  url: string,
+  maxItems = 2000,
+): Promise<unknown[]> {
+  const out: unknown[] = [];
+  let nextLink: string | null = url;
+  while (nextLink) {
+    const d = await azGraphJson(nextLink);
+    const page = Array.isArray(d.value) ? d.value : [];
+    for (const item of page) {
+      out.push(item);
+      if (out.length >= maxItems) return out;
+    }
+    nextLink = typeof d["@odata.nextLink"] === "string"
+      ? d["@odata.nextLink"]
+      : null;
+  }
+  return out;
+}
+
+/** Download a Graph URL's raw bytes with the delegated az-session token. */
+export async function azGraphBytes(
+  url: string,
+): Promise<{ bytes: Uint8Array; contentType: string }> {
+  const token = await azGraphToken();
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(
+      `Graph download ${url} failed HTTP ${res.status}: ${text.slice(0, 200)}`,
+    );
+  }
+  return {
+    bytes: new Uint8Array(await res.arrayBuffer()),
+    contentType: res.headers.get("content-type") ?? "application/octet-stream",
+  };
+}

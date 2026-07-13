@@ -1,7 +1,7 @@
 # @dougschaefer/ms-graph
 
-A broad Microsoft Graph v1.0 extension for the ASEI catalog. One extension, seven
-model types, one shared app-only client. It supersedes the narrow
+A broad Microsoft Graph v1.0 extension for the ASEI catalog. One extension, eight
+model types, one shared client. It supersedes the narrow
 `@dougschaefer/ms-graph-calendar` and absorbs the lookup half of
 `@dougschaefer/azure-ad-user` into a Graph-native `users` model.
 
@@ -14,10 +14,26 @@ model types, one shared app-only client. It supersedes the narrow
 | `@dougschaefer/ms-graph-mail` | `listMessages`, `getMessage` | `Mail.Read` |
 | `@dougschaefer/ms-graph-teams` | `listChats`, `listJoinedTeams`, `listChannels`, `listMessages` | `Chat.Read.All`, `ChannelMessage.Read.All` (+ `Team.ReadBasic.All`, `Channel.ReadBasic.All`) |
 | `@dougschaefer/ms-graph-presence` | `getPresence` | `Presence.Read.All` |
+| `@dougschaefer/ms-graph-sharepoint` | `getSite`, `listFolder`, `findCustomerFolder`, `searchDriveItems`, `downloadDriveItem`, `collectCustomerDocs` | delegated az-session token (operator's own SharePoint permissions) |
 
-All seven types share `_client.ts`: client-credentials token acquisition with an
-in-memory token cache, a low-level `graphRequest`, and a `graphList` paging helper
-that auto-follows `@odata.nextLink`. Plain `fetch` only — no native-addon npm deps.
+The first seven types share `_client.ts`'s app-only client: client-credentials
+token acquisition with an in-memory token cache, a low-level `graphRequest`, and
+a `graphList` paging helper that auto-follows `@odata.nextLink`. Plain `fetch`
+only — no native-addon npm deps.
+
+The `sharepoint` model deliberately breaks from the app-only pattern: it reads a
+document library with the DELEGATED token of the active `az login` session, so
+file access rides the signed-in operator's own identity and SharePoint
+permissions, requires no vault configuration and no app permission grants, and
+shows the human (not an app) in SharePoint audit logs. It understands a
+clients-library layout of office folders → single-letter buckets → customer
+folders → `<project#> <title>` project folders: `findCustomerFolder` resolves a
+customer name across all offices, and `collectCustomerDocs` walks the customer's
+tree, scores files against keywords and ERP project numbers (signed documents
+and customer POs score highest), and downloads the winners as file artifacts
+with a manifest — the engine behind the CPOR evidence-remediation workflow. If
+it ever needs to run headless, grant an app registration `Sites.Selected` on
+the specific site instead of widening to `Sites.Read.All`.
 
 ## Authentication
 
