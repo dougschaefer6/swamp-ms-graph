@@ -125,12 +125,12 @@ async function siteId(g: SharePointGlobalArgs): Promise<string> {
 /**
  * Find items by name by walking the folder tree, breadth-first.
  *
- * Graph's own `/drive/root/search(q=)` would be the obvious implementation and
- * is what this model used while it authenticated delegated. That endpoint does
- * not support the `Sites.Selected` permission — it returns HTTP 500
+ * Graph's own `/drive/root/search(q=)` is the default path and is tried first.
+ * It does not support the `Sites.Selected` permission — it returns HTTP 500
  * "General exception while processing" rather than a permission error — and the
- * only permission-level fix is widening to `Sites.ReadWrite.All`, which is
- * tenant-wide and would defeat the point of per-site grants.
+ * only permission-level fix is a tenant-wide read scope such as
+ * `Sites.Read.All`, which defeats the point of per-site grants. This walk is
+ * what makes the method work under `Sites.Selected` anyway.
  *
  * The trade-off is real and worth stating: Graph search indexes file CONTENT,
  * while this matches on the item NAME only. Searches that relied on finding
@@ -228,7 +228,7 @@ async function listChildren(
  */
 export const model = {
   type: "@dougschaefer/ms-graph-sharepoint",
-  version: "2026.08.10.1",
+  version: "2026.08.10.2",
   globalArguments: SharePointGlobalArgsSchema,
   resources: {
     site: {
