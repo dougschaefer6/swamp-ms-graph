@@ -32,7 +32,7 @@ import {
  */
 export const model = {
   type: "@dougschaefer/ms-graph-calendar",
-  version: "2026.07.13.4",
+  version: "2026.08.10.1",
   globalArguments: MsGraphGlobalArgsSchema,
   resources: {
     calendarView: {

@@ -4,10 +4,11 @@ import { z } from "npm:zod@4.3.6";
  * Shared client, schema, and context types for the `@dougschaefer/ms-graph-*`
  * model family.
  *
- * This is the broad Microsoft Graph extension for the org catalog. Seven model
- * types (calendar, places, users, groups, mail, teams, presence) all share this
- * one client: token acquisition, in-memory token caching, a low-level Graph REST
- * request helper, and an automatic `@odata.nextLink` paging helper.
+ * This is the broad Microsoft Graph extension for the org catalog. All nine
+ * model types (calendar, places, users, groups, mail, teams, presence,
+ * sharepoint, intune) share this one client: token acquisition, in-memory token
+ * caching, a low-level Graph REST request helper, an automatic
+ * `@odata.nextLink` paging helper, and a raw-bytes downloader for file content.
  *
  * Authentication: app-only client-credentials flow against Microsoft Graph v1.0,
  * using an Entra app registration whose application permissions are admin-consented.
@@ -26,6 +27,18 @@ import { z } from "npm:zod@4.3.6";
 
 /** Microsoft Graph v1.0 base URL. */
 export const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
+
+/**
+ * Microsoft Graph beta base URL.
+ *
+ * Used only where a resource has no v1.0 equivalent — chiefly parts of the
+ * Intune `deviceManagement` surface (settings-catalog configuration policies,
+ * remediation health scripts, on-demand remediation). Beta resources are not
+ * covered by Graph's API contract: shapes can change without notice, so any
+ * method built on this base should tolerate missing fields rather than assume
+ * them.
+ */
+export const GRAPH_BETA = "https://graph.microsoft.com/beta";
 
 /**
  * GlobalArgs shared by every `@dougschaefer/ms-graph-*` model: one Entra app
@@ -193,7 +206,11 @@ function graphErrorMessage(data: unknown): string | undefined {
  * @param g - resolved globalArgs
  * @param method - HTTP verb
  * @param url - full URL (Graph v1.0 base is `https://graph.microsoft.com/v1.0`)
- * @param opts - optional Prefer header value and additional query params
+ * @param opts - optional Prefer header value, additional query params, and a
+ *   JSON request body for POST/PATCH/PUT calls. A body of `null` is sent as a
+ *   literal JSON `null`; omit the key entirely for a bodyless request. Graph
+ *   device actions such as `syncDevice` take no body at all, so passing
+ *   `undefined` there is correct rather than an empty object.
  */
 export async function graphRequest(
   g: MsGraphGlobalArgs,
@@ -202,6 +219,7 @@ export async function graphRequest(
   opts: {
     query?: Record<string, string>;
     prefer?: string;
+    body?: unknown;
   } = {},
 ): Promise<{ status: number; data: unknown }> {
   const token = await acquireToken(g);
@@ -218,6 +236,10 @@ export async function graphRequest(
   if (opts.prefer) {
     headers["Prefer"] = opts.prefer;
   }
+  const hasBody = Object.prototype.hasOwnProperty.call(opts, "body");
+  if (hasBody) {
+    headers["Content-Type"] = "application/json";
+  }
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), g.timeoutMs);
   let res: Response;
@@ -225,6 +247,7 @@ export async function graphRequest(
     res = await fetch(parsed.toString(), {
       method,
       headers,
+      body: hasBody ? JSON.stringify(opts.body) : undefined,
       signal: ctrl.signal,
     });
   } finally {
@@ -284,6 +307,44 @@ export async function graphList(
 }
 
 /**
+ * Download a Graph URL's raw bytes with the app-only token. Used for file
+ * content endpoints, which return the bytes themselves rather than JSON and so
+ * cannot go through the JSON-parsing request helper.
+ *
+ * @param g - resolved globalArgs
+ * @param url - full Graph URL returning file content
+ */
+export async function graphBytes(
+  g: MsGraphGlobalArgs,
+  url: string,
+): Promise<{ bytes: Uint8Array; contentType: string }> {
+  const token = await acquireToken(g);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), g.timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: ctrl.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(
+      `Graph download ${new URL(url).pathname} -> HTTP ${res.status}: ${
+        text.slice(0, 300)
+      }`,
+    );
+  }
+  return {
+    bytes: new Uint8Array(await res.arrayBuffer()),
+    contentType: res.headers.get("content-type") ?? "application/octet-stream",
+  };
+}
+
+/**
  * Turn an email address or arbitrary identifier into a short, file-name-safe
  * slug used to name the data instance a method writes.
  */
@@ -293,110 +354,4 @@ export function slugify(value: string, fallback = "item"): string {
     .replace(/[^a-zA-Z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 48) || fallback;
-}
-
-/** In-memory cache for the delegated az-session Graph token. */
-let _azTokenCache: { token: string; expiresAt: number } | null = null;
-
-/**
- * Acquire a DELEGATED Microsoft Graph token from the active `az login`
- * session (the signed-in human, not an app registration). Used by the
- * sharepoint model, where document access should ride the operator's own
- * identity and SharePoint permissions rather than an app-only grant. The
- * token arrives in az's JSON output (never on a command line) and is cached
- * until shortly before expiry.
- */
-export async function azGraphToken(): Promise<string> {
-  const now = Date.now();
-  if (_azTokenCache && _azTokenCache.expiresAt > now) {
-    return _azTokenCache.token;
-  }
-  const cmd = new Deno.Command("az", {
-    args: [
-      "account",
-      "get-access-token",
-      "--resource",
-      "https://graph.microsoft.com",
-      "--output",
-      "json",
-    ],
-    stdout: "piped",
-    stderr: "piped",
-  });
-  const result = await cmd.output();
-  if (result.code !== 0) {
-    const stderr = new TextDecoder().decode(result.stderr);
-    throw new Error(`az graph token acquisition failed: ${stderr}`);
-  }
-  const data = JSON.parse(new TextDecoder().decode(result.stdout)) as Record<
-    string,
-    unknown
-  >;
-  const token = str(data.accessToken);
-  // expiresOn is a local-time string; refresh conservatively every 20 min.
-  _azTokenCache = { token, expiresAt: now + 20 * 60 * 1000 };
-  return token;
-}
-
-/** GET a Graph URL with the delegated az-session token; throws on non-2xx. */
-export async function azGraphJson(
-  url: string,
-): Promise<Record<string, unknown>> {
-  const token = await azGraphToken();
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  });
-  const text = await res.text();
-  let data: Record<string, unknown> = {};
-  try {
-    data = JSON.parse(text);
-  } catch {
-    // fall through
-  }
-  if (!res.ok) {
-    const detail = graphErrorMessage(data) ?? text.slice(0, 300);
-    throw new Error(`Graph GET ${url} failed HTTP ${res.status}: ${detail}`);
-  }
-  return data;
-}
-
-/** Follow @odata.nextLink pages for a delegated az-session GET. */
-export async function azGraphAllPages(
-  url: string,
-  maxItems = 2000,
-): Promise<unknown[]> {
-  const out: unknown[] = [];
-  let nextLink: string | null = url;
-  while (nextLink) {
-    const d = await azGraphJson(nextLink);
-    const page = Array.isArray(d.value) ? d.value : [];
-    for (const item of page) {
-      out.push(item);
-      if (out.length >= maxItems) return out;
-    }
-    nextLink = typeof d["@odata.nextLink"] === "string"
-      ? d["@odata.nextLink"]
-      : null;
-  }
-  return out;
-}
-
-/** Download a Graph URL's raw bytes with the delegated az-session token. */
-export async function azGraphBytes(
-  url: string,
-): Promise<{ bytes: Uint8Array; contentType: string }> {
-  const token = await azGraphToken();
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(
-      `Graph download ${url} failed HTTP ${res.status}: ${text.slice(0, 200)}`,
-    );
-  }
-  return {
-    bytes: new Uint8Array(await res.arrayBuffer()),
-    contentType: res.headers.get("content-type") ?? "application/octet-stream",
-  };
 }
