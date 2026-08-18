@@ -57,7 +57,7 @@ const ChannelSchema = z
  */
 export const model = {
   type: "@dougschaefer/ms-graph-teams",
-  version: "2026.08.10.2",
+  version: "2026.08.17.1",
   globalArguments: MsGraphGlobalArgsSchema,
   resources: {
     chat: {

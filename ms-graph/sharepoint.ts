@@ -228,7 +228,7 @@ async function listChildren(
  */
 export const model = {
   type: "@dougschaefer/ms-graph-sharepoint",
-  version: "2026.08.10.2",
+  version: "2026.08.17.1",
   globalArguments: SharePointGlobalArgsSchema,
   resources: {
     site: {

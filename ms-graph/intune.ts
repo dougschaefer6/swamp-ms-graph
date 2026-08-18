@@ -228,7 +228,7 @@ async function dispatchAction(
  */
 export const model = {
   type: "@dougschaefer/ms-graph-intune",
-  version: "2026.08.10.2",
+  version: "2026.08.17.1",
   globalArguments: MsGraphGlobalArgsSchema,
   resources: {
     managedDevice: {

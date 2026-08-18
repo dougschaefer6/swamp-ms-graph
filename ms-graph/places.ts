@@ -30,7 +30,7 @@ import {
  */
 export const model = {
   type: "@dougschaefer/ms-graph-places",
-  version: "2026.08.10.2",
+  version: "2026.08.17.1",
   globalArguments: MsGraphGlobalArgsSchema,
   resources: {
     roomList: {
